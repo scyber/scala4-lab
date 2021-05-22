@@ -40,6 +40,7 @@ lazy val CommonDependencies = Seq(
   //Add any need for project
   Dependency.spark,
   Dependency.scalalogginig,
+  Dependency.sparkSql
 
 
 
