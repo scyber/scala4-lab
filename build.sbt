@@ -6,7 +6,7 @@ val rootPackage = "ru.example"
 val subRootPackage = s"$rootPackage.scala4-lab"
 val projectV = "0.0.1-SNAPSHOT"
 val scalaV = "2.12.12"
-
+val circeVersion = "0.12.3"
 
 
 lazy val settings = Seq(
@@ -34,7 +34,7 @@ lazy val rootProject = project.in(file("."))
   ).aggregate(lab1)
 lazy val lab1 = project.settings(
   name := "lab1",
-  libraryDependencies ++=CommonDependencies ++ testDependencies
+  libraryDependencies ++=CommonDependencies ++ testDependencies ++ circe
 )
 lazy val CommonDependencies = Seq(
   //Add any need for project
@@ -48,6 +48,12 @@ lazy val CommonDependencies = Seq(
 lazy val testDependencies = Seq(
   Dependency.scalaTest
 )
+
+lazy val circe = Seq(
+  "io.circe" %% "circe-core",
+  "io.circe" %% "circe-generic",
+  "io.circe" %% "circe-parser"
+).map(_ % circeVersion)
 
 // code formatter, executed on goal:compile by default
 //scalariformPreferences := scalariformPreferences.value
