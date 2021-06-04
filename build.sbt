@@ -1,4 +1,4 @@
-
+import Dependency.{ sparkV}
 
 
 // Project setup
@@ -31,10 +31,16 @@ lazy val rootProject = project.in(file("."))
     name := "scala4-lab",
     organization := rootPackage,
     version := projectV
-  ).aggregate(lab1)
+  ).aggregate(lab1, lab2)
+
 lazy val lab1 = project.settings(
   name := "lab1",
   libraryDependencies ++=CommonDependencies ++ testDependencies ++ circe
+)
+lazy val lab2 = project.settings(
+  name := "lab2",
+  libraryDependencies ++=CommonDependencies ++ testDependencies ++ circe ++ sparkMllib
+
 )
 lazy val CommonDependencies = Seq(
   //Add any need for project
@@ -54,6 +60,8 @@ lazy val circe = Seq(
   "io.circe" %% "circe-generic",
   "io.circe" %% "circe-parser"
 ).map(_ % circeVersion)
+
+val sparkMllib = Seq( "org.apache.spark" %% "spark-mllib" ).map(_ % sparkV)
 
 // code formatter, executed on goal:compile by default
 //scalariformPreferences := scalariformPreferences.value

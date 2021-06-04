@@ -13,6 +13,7 @@ object Dependency {
   val sparkSql = "org.apache.spark" %% "spark-sql" % sparkV
 
 
+
   val akkaHttp = "com.typesafe.akka" %% "akka-http" % akkaHttpV
   val akkaStreams = "com.typesafe.akka" %% "akka-stream" % akkaStreamsV
   val akkaHttpCore = "com.typesafe.akka" %% "akka-http-core" % akkaHttpV
