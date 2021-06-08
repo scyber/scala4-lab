@@ -42,6 +42,10 @@ lazy val lab2 = project.settings(
   libraryDependencies ++=CommonDependencies ++ testDependencies ++ circe ++ sparkMllib
 
 )
+lazy val lab3b = project.settings(
+  name := "lab3b",
+  libraryDependencies ++=CommonDependencies ++ sparkMllib ++ circe ++ testDependencies
+)
 lazy val CommonDependencies = Seq(
   //Add any need for project
   Dependency.spark,

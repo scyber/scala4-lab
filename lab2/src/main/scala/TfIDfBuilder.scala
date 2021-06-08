@@ -14,9 +14,11 @@ import java.util.regex.Pattern
 
 object TfIDfBuilder {
 
+  case class Result(id: String, array: Array[Int])
+
   def main(args: Array[String]): Unit = {
 
-    val idCourses = List(13702 /*23126 , 21617, 16627, 11556, 11556, 13702*/ )
+    val idCourses = List(23126, 23126 , 21617, 16627, 11556, 16704, 13702 )
     val ss = SparkSession
       .builder()
       .master("local[*]")
@@ -29,70 +31,53 @@ object TfIDfBuilder {
     val dfCourses = courses.toDF().select(col("id"), col("lang"), col("desc"))
     val Process = udf(ExtractWords _)
     val myDf = dfCourses.select(col("*")).where(col("id") === 13702)
-    myDf.show()
-    val ruCourses = dfCourses
-      .select(col("id"), col("lang"), col("desc"))
-      .where(col("lang").equalTo("ru"))
+    val my_lang = myDf.select(col("lang")).collect().head.toString().replaceAll("\\[|\\]", "")
+
+    println(my_lang)
+
+
+
     val allCourses = dfCourses.select(
       col("id"),
       col("lang"),
       col("desc"),
       Process(col("desc")).alias("words")
-    )
+    ).where(col("lang") === my_lang)
 
-    val esCourses = dfCourses
-      .select(
-        col("id"),
-        col("lang"),
-        col("desc"),
-        Process(col("desc")).alias("words")
-      )
-      .where(col("lang").equalTo("es"))
-    val enCourses = dfCourses
-      .select(
-        col("id"),
-        col("lang"),
-        col("desc"),
-        Process(col("desc")).alias("words")
-      )
-      .where(col("lang").equalTo("en"))
 
-    val cleanRuCourses = ruCourses.select(
-      col("id"),
-      col("lang"),
-      col("desc"),
-      Process(col("desc")).alias("words")
-    )
-    //cleanRuCourses.show(10)
+    val regexParsers = my_lang match {
+      case "ru" => "\\^[а-яА-ЯёЁ]+"
+      case _ => "\\W"
+    }
 
     val ruRegExpTok = new RegexTokenizer()
       .setInputCol("desc")
       .setOutputCol("word_tok")
-      .setPattern("\\W|[а-яА-ЯёЁ]+")
+      .setPattern(regexParsers)
 
-    val remover =
-      new StopWordsRemover()
-        .setInputCol("word_tok")
-        .setOutputCol("cleaned_words")
+//    val remover =
+//      new StopWordsRemover()
+//        .setInputCol("word_tok")
+//        .setOutputCol("cleaned_words")
 
-    val enTokenized = ruRegExpTok.transform(ruCourses)
+    val enTokenized = ruRegExpTok.transform(allCourses)
     //enTokenized.printSchema()
     //enTokenized.show(5)
 
-    val enFiltred = remover.transform(enTokenized)
+//    val enFiltred = remover.transform(enTokenized)
 
-    enFiltred.show(10)
+    //enFiltred.show(10)
 
     val hashingTF = new HashingTF()
       .setInputCol("words")
       .setOutputCol("rawFeatures")
       .setNumFeatures(10000)
-    val tfRu = hashingTF.transform(enFiltred)
+    val tfRu = hashingTF.transform(enTokenized)
 //
     val idfRu = new IDF().setInputCol("rawFeatures").setOutputCol("features")
     val idfModelru = idfRu.fit(tfRu)
     val rescaledData = idfModelru.transform(tfRu)
-//    rescaledData.printSchema()
+
     rescaledData.show(10)
     val cosSimilarity = udf { (x: Vector, y: Vector) =>
       val v1 = x.toArray
@@ -131,32 +116,11 @@ object TfIDfBuilder {
           Window.partitionBy(col("id_frd")).orderBy(col("cosine_sim").desc)
         )
       )
-      .filter(col("rank") between (1, 10))
+      .filter(col("rank") between (2, 11))
 
     resultDF.show(10)
 
-//    val idfRu = new IDF().fit(tfRu)
-//    val tfidfRu = idfRu.transform(tfRu)
-//    tfRu.show(10)
-//    tfidfRu.show(10)
 
-//    println("words with clean")
-//    wordsWithClean.show(5)
-//    val myCourses = wordsWithClean.select("*").where(col("id").isin(23126, 21617,16627,11556,11556,13702))
-//    myCourses.show()
-    //println(dfCourses.count())
-
-//    val idf = new IDF().setInputCol("vectorOutput").setOutputCol("features")
-
-//    val featurizedData = hashingTF.transform(cleanWords)
-//    println( "------ featurizedData -----")
-//    featurizedData.printSchema()
-//    println(featurizedData.show(5))
-//    val idfModel = idf.fit(featurizedData)
-//    val rescaledData = idfModel.transform(featurizedData)
-//    println("----- rescaledData  ------")
-//    rescaledData.show(10)
-//    rescaledData.printSchema()
 
   }
   def ExtractWords(s: String) = {

@@ -17,7 +17,7 @@ object SampleSolution {
     val df =
       ss.read.json("lab2/src/main/resources/DO_record_per_line.json")
     val cleaned_df = df
-      .withColumn("desc", regexp_replace(col("desc"), "[^\\w\\sа-яА-ЯЁё]", ""))
+      //.withColumn("desc", regexp_replace(col("desc"), "[^\\w\\sа-яА-ЯЁё]", ""))
       .withColumn("desc", lower(trim(regexp_replace(col("desc"), "\\s+", " "))))
       .where(length(col("desc")) > 0)
 
@@ -51,7 +51,7 @@ object SampleSolution {
       scalar / (l1 * l2)
     }
 
-    val id_list = Seq(23126, 21617, 16627, 11556, 11556, 13702)
+    val id_list = Seq(/*23126, 21617, 16627, 11556, 11556,*/ 13702)
     val filtered_df = newDf
       .filter(col("id").isin(id_list: _*))
       .select(
