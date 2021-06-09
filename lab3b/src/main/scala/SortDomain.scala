@@ -1,6 +1,8 @@
-import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{col, _}
-import org.apache.spark.sql.types.{IntegerType, LongType, StructField, StructType}
+import cats.implicits.catsSyntaxEq
+import org.apache.spark.ml.linalg.Vector
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.{DecimalType, FloatType, IntegerType, LongType, StructField, StructType}
 
 object SortDomain {
 
@@ -48,15 +50,37 @@ object SortDomain {
      val tg = domains.join(users, domains.col("user_id") === users.col("id"), "left")
        .withColumn("auto-flag", when(domains.col("user_id") === users.col("id"),1).otherwise(0))
        .drop(users.columns: _*)
-
+     val dom_counter = tg.count()
      //tg.show(10)
-     val tg_res = tg.select(col("domain"),col("auto-flag"))
-     //tg_res.show(10)
+     val tg_auto = tg.groupBy(col("domain").alias("dom-auto"),col("auto-flag")).count().as("auto-vistors").where(col("auto-flag") === 1)
+
+    val all_auto_visitors = tg.select(col("*")).where(tg.col("auto-flag") === 1).count()
+    val tg_n_auto = tg.groupBy(col("domain").alias("dom-no-auto"),col("auto-flag")).count().as("no-auto-vistiors").where(col("auto-flag") === 0)
+    //tg_n_auto.show(10)
+    val tg_f_c = tg.groupBy(col("domain").alias("dom-full")).count().as("all-visitors")
+    //tg_f_c.show(10)
+    val joined = tg_auto.join(tg_n_auto, tg_auto.col("dom-auto") === tg_n_auto.col("dom-no-auto"))
+                        .join(tg_f_c, tg_auto.col("dom-auto") === tg_f_c.col("dom-full"))
+      .withColumn("auto-visitors", tg_auto.col("count"))
+      .withColumn("no-autovistors", tg_n_auto.col("count"))
+      .withColumn("all-vistors", tg_f_c.col("count"))
+      .drop(tg_auto.col("count"))
+      .drop(tg_n_auto.col("count"))
+      .drop(tg_f_c.col("count"))
+      .withColumn("proba", pow((col("auto-visitors")/dom_counter),2)/(((col("all-vistors"))*all_auto_visitors))/(dom_counter*dom_counter))
+
+   val sorted =  joined.sort(round(col("proba"),20) desc)
+    sorted.show(10)
+    println(all_auto_visitors)
+    //tmp_url.select(col("url")).where(col("url").like("%ravka%")).show(10)
+    //val res = joined.select(col("dom-full"),(pow((col("auto-visitors")/dom_counter),2)/(((col("all-vistors"))*all_auto_visitors))/(dom_counter*dom_counter)).alias("proba")).orderBy(col("proba"),col("dom-full"))
+    //res.show(10)
     //val dic_users = broadcast(users.select("id"))
     //val target = domains.withColumn("auto-flag", when(domains.col("user_id") === users.select(col("id")), 1).otherwise(0))
-    val rel = tg_res.groupBy(col("domain"),col("auto-flag")).count().where(col("auto-flag") === 1)
+
     //target.show(10)
-    rel.show()
+
+
 
     //val joined = domains.withColumn("aut-flag",1)
 
