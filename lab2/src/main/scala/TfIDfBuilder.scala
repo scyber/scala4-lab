@@ -18,7 +18,7 @@ object TfIDfBuilder {
 
   def main(args: Array[String]): Unit = {
 
-    val idCourses = List(23126, 23126 , 21617, 16627, 11556, 16704, 13702 )
+    val idCourses = List(23126, 23126, 21617, 16627, 11556, 16704, 13702)
     val ss = SparkSession
       .builder()
       .master("local[*]")
@@ -31,23 +31,27 @@ object TfIDfBuilder {
     val dfCourses = courses.toDF().select(col("id"), col("lang"), col("desc"))
     val Process = udf(ExtractWords _)
     val myDf = dfCourses.select(col("*")).where(col("id") === 13702)
-    val my_lang = myDf.select(col("lang")).collect().head.toString().replaceAll("\\[|\\]", "")
+    val my_lang = myDf
+      .select(col("lang"))
+      .collect()
+      .head
+      .toString()
+      .replaceAll("\\[|\\]", "")
 
     println(my_lang)
 
-
-
-    val allCourses = dfCourses.select(
-      col("id"),
-      col("lang"),
-      col("desc"),
-      Process(col("desc")).alias("words")
-    ).where(col("lang") === my_lang)
-
+    val allCourses = dfCourses
+      .select(
+        col("id"),
+        col("lang"),
+        col("desc"),
+        Process(col("desc")).alias("words")
+      )
+      .where(col("lang") === my_lang)
 
     val regexParsers = my_lang match {
       case "ru" => "\\^[а-яА-ЯёЁ]+"
-      case _ => "\\W"
+      case _    => "\\W"
     }
 
     val ruRegExpTok = new RegexTokenizer()
@@ -119,8 +123,6 @@ object TfIDfBuilder {
       .filter(col("rank") between (2, 11))
 
     resultDF.show(10)
-
-
 
   }
   def ExtractWords(s: String) = {

@@ -44,7 +44,7 @@ lazy val lab2 = project.settings(
 )
 lazy val lab3b = project.settings(
   name := "lab3b",
-  libraryDependencies ++=CommonDependencies ++ sparkMllib ++ circe ++ testDependencies
+  libraryDependencies ++=CommonDependencies ++ sparkMllib ++ circe ++ testDependencies ++ breeze
 )
 lazy val CommonDependencies = Seq(
   //Add any need for project
@@ -66,6 +66,10 @@ lazy val circe = Seq(
 ).map(_ % circeVersion)
 
 val sparkMllib = Seq( "org.apache.spark" %% "spark-mllib" ).map(_ % sparkV)
+val breeze = Seq("org.scalanlp" %% "breeze" % "0.13",
+                 "org.scalanlp" %% "breeze-natives" % "0.13",
+                      "org.scalanlp" %% "breeze-viz" % "0.13"
+              )
 
 // code formatter, executed on goal:compile by default
 //scalariformPreferences := scalariformPreferences.value
