@@ -5,7 +5,7 @@ import Dependency.{ sparkV}
 val rootPackage = "ru.example"
 val subRootPackage = s"$rootPackage.scala4-lab"
 val projectV = "0.0.1-SNAPSHOT"
-val scalaV = "2.12.12"
+val scalaV = "2.11.11"
 val circeVersion = "0.12.3"
 
 
@@ -45,6 +45,10 @@ lazy val lab2 = project.settings(
 lazy val lab3b = project.settings(
   name := "lab3b",
   libraryDependencies ++=CommonDependencies ++ sparkMllib ++ circe ++ testDependencies ++ breeze
+)
+lazy val  lab4b = project.settings(
+  name := "lab4b",
+  libraryDependencies ++= CommonDependencies ++ sparkMllib
 )
 lazy val CommonDependencies = Seq(
   //Add any need for project

@@ -45,13 +45,12 @@ object TfIDfBuilder {
         col("id"),
         col("lang"),
         col("desc"),
-        Process(col("desc")).alias("words")
-      )
+        Process(col("desc")).alias("words"))
       .where(col("lang") === my_lang)
 
     val regexParsers = my_lang match {
       case "ru" => "\\^[а-яА-ЯёЁ]+"
-      case _    => "\\W"
+      case _ => "\\W"
     }
 
     val ruRegExpTok = new RegexTokenizer()
@@ -59,16 +58,16 @@ object TfIDfBuilder {
       .setOutputCol("word_tok")
       .setPattern(regexParsers)
 
-//    val remover =
-//      new StopWordsRemover()
-//        .setInputCol("word_tok")
-//        .setOutputCol("cleaned_words")
+    //    val remover =
+    //      new StopWordsRemover()
+    //        .setInputCol("word_tok")
+    //        .setOutputCol("cleaned_words")
 
     val enTokenized = ruRegExpTok.transform(allCourses)
     //enTokenized.printSchema()
     //enTokenized.show(5)
 
-//    val enFiltred = remover.transform(enTokenized)
+    //    val enFiltred = remover.transform(enTokenized)
 
     //enFiltred.show(10)
 
@@ -77,7 +76,7 @@ object TfIDfBuilder {
       .setOutputCol("rawFeatures")
       .setNumFeatures(10000)
     val tfRu = hashingTF.transform(enTokenized)
-//
+    //
     val idfRu = new IDF().setInputCol("rawFeatures").setOutputCol("features")
     val idfModelru = idfRu.fit(tfRu)
     val rescaledData = idfModelru.transform(tfRu)
@@ -96,30 +95,24 @@ object TfIDfBuilder {
       .select(
         col("id").alias("id_frd"),
         col("features").alias("dense_frd"),
-        col("lang").alias("lang_frd")
-      )
+        col("lang").alias("lang_frd"))
 
     val joinedDf = rescaledData
       .join(
         broadcast(count_df),
-        col("id") =!= col("id_frd") && col("lang") === col("lang_frd")
-      )
+        col("id") =!= col("id_frd") && col("lang") === col("lang_frd"))
       .withColumn(
         "cosine_sim",
-        cosSimilarity(col("dense_frd"), col("features"))
-      )
+        cosSimilarity(col("dense_frd"), col("features")))
     val resultDF = joinedDf
       .select(col("id"), col("lang"), col("cosine_sim"), col("id_frd"))
       .withColumn(
         "cosine_sim",
-        when(col("cosine_sim").isNaN, 0).otherwise(col("cosine_sim"))
-      )
+        when(col("cosine_sim").isNaN, 0).otherwise(col("cosine_sim")))
       .withColumn(
         "rank",
         row_number().over(
-          Window.partitionBy(col("id_frd")).orderBy(col("cosine_sim").desc)
-        )
-      )
+          Window.partitionBy(col("id_frd")).orderBy(col("cosine_sim").desc)))
       .filter(col("rank") between (2, 11))
 
     resultDF.show(10)

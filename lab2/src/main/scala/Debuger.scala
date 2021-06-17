@@ -1,5 +1,14 @@
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.ml.feature.StopWordsRemover
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.{
+  ArrayType,
+  IntegerType,
+  StringType,
+  StructField,
+  StructType
+}
+import shapeless.HList.ListCompat.::
 
 object Debuger {
   def main(args: Array[String]): Unit = {
@@ -9,21 +18,53 @@ object Debuger {
       .appName("UDFCounter")
       .getOrCreate()
 
-    val remover = new StopWordsRemover()
-      .setInputCol("raw")
-      .setOutputCol("filtered")
+    val src_schema =
+      new StructType()
+        .add("uid", StringType)
+        .add(
+          "visits",
+          ArrayType(
+            new StructType()
+              .add("url", StringType)
+              .add("timestamp", IntegerType)))
 
-    val dataSet = ss
-      .createDataFrame(
-        Seq(
-          (0, Seq("I", "saw", "the", "red", "balloon")),
-          (1, Seq("Mary", "had", "a", "little", "lamb"))
-        )
-      )
-      .toDF("id", "raw")
-    dataSet.printSchema()
+    import ss.implicits._
+    val parce = udf { (s: Seq[String]) =>
+      extractDomains(s)
+    }
+    val df = ss.read
+      .json("lab2/src/main/resources/sample.json")
+      .withColumn("url", col("visits.url"))
 
-    remover.transform(dataSet).show(false)
+    //      .select(col("visits.*"))
+    val r = df.withColumn("udftest", parce(col("url")))
+    r.show()
+
+    //val r = df.select($"host", callUDF("parce_url", col("url"), lit("HOST")))
+    //r.show()
+    //.select(('value).cast("string"))
+    //.as("js_val")
+    //value.count()
 
   }
+  def extractDomainName(s: String): String = {
+
+    val firstPattern = """(?:(?![https]))([a-z.-]+)""".r
+    val input = firstPattern.findFirstIn(s)
+    val first = input match {
+      case Some(v) => {
+        v
+      }
+      case _ => ""
+    }
+    val secondPattern = """(?:\w(?![www\.]))([a-z.-]+)""".r
+    val res = secondPattern.findFirstIn(first) match {
+      case Some(v) => v
+      case _ => ""
+    }
+    res
+  }
+  def extractDomains(seg: Seq[String]): Seq[String] =
+    seg.map(s => extractDomainName(s))
+
 }

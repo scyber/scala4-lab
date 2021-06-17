@@ -1,9 +1,9 @@
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.ml.feature.{HashingTF, IDF, Tokenizer}
+import org.apache.spark.ml.feature.{ HashingTF, IDF, Tokenizer }
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.rdd.RDD
 import org.apache.spark.mllib.linalg.distributed._
-import org.apache.spark.ml.linalg.{SparseVector, Vector}
+import org.apache.spark.ml.linalg.{ SparseVector, Vector }
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.expressions.Window
 
@@ -14,10 +14,12 @@ object SampleSolution {
       .master("local[*]")
       .appName("UDFCounter")
       .getOrCreate()
-    val df =
+    val df = {
       ss.read.json("lab2/src/main/resources/DO_record_per_line.json")
+    }
+    df.printSchema()
     val cleaned_df = df
-    //.withColumn("desc", regexp_replace(col("desc"), "[^\\w\\sа-яА-ЯЁё]", ""))
+      //.withColumn("desc", regexp_replace(col("desc"), "[^\\w\\sа-яА-ЯЁё]", ""))
       .withColumn("desc", lower(trim(regexp_replace(col("desc"), "\\s+", " "))))
       .where(length(col("desc")) > 0)
 
@@ -57,31 +59,25 @@ object SampleSolution {
       .select(
         col("id").alias("id_frd"),
         col("dense_features").alias("dense_frd"),
-        col("lang").alias("lang_frd")
-      )
+        col("lang").alias("lang_frd"))
 
     val joinedDf = newDf
       .join(
         broadcast(filtered_df),
-        col("id") =!= col("id_frd") && col("lang") === col("lang_frd")
-      )
+        col("id") =!= col("id_frd") && col("lang") === col("lang_frd"))
       .withColumn(
         "cosine_sim",
-        cosSimilarity(col("dense_frd"), col("dense_features"))
-      )
+        cosSimilarity(col("dense_frd"), col("dense_features")))
 
     val filtered = joinedDf
       .filter(col("lang") === "en")
       .withColumn(
         "cosine_sim",
-        when(col("cosine_sim").isNaN, 0).otherwise(col("cosine_sim"))
-      )
+        when(col("cosine_sim").isNaN, 0).otherwise(col("cosine_sim")))
       .withColumn(
         "rank",
         row_number().over(
-          Window.partitionBy(col("id_frd")).orderBy(col("cosine_sim").desc)
-        )
-      )
+          Window.partitionBy(col("id_frd")).orderBy(col("cosine_sim").desc)))
       .filter(col("rank") between (2, 11))
 
     filtered.show(100)
